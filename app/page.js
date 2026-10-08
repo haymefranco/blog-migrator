@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
-import { pMap, formatFriendlyDate } from '@/lib/utils';
-import { buildCsv, buildImageManifest } from '@/lib/csv';
+import { pMap, formatFriendlyDate } from '../lib/utils';
+import { buildCsv, buildImageManifest } from '../lib/csv';
 import { buildWxr } from '@/lib/wxr';
 
 export default function Home() {
