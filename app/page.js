@@ -248,7 +248,7 @@ export default function Home() {
 
   return (
     <div className="wrap">
-      <h1>Blog Migrator</h1>
+      <h1>Franc's Blog Migrator</h1>
       <div className="sub">
         Any blog → CSV + WXR (WordPress) + images · Axios + Cheerio
       </div>
