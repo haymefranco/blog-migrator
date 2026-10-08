@@ -13,8 +13,14 @@ export default function Home() {
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(35);
   const [concurrency, setConcurrency] = useState(4);
-  const [useSitemap, setUseSitemap] = useState(true);
   const [includeImagesInZip, setIncludeImagesInZip] = useState(true);
+
+  const [discoveryMode, setDiscoveryMode] = useState('auto');
+  const [paginationMode, setPaginationMode] = useState('path');
+  const [paginationPattern, setPaginationPattern] = useState('/page/{page}');
+  const [postRegex, setPostRegex] = useState('');
+  const [contentSelector, setContentSelector] = useState('');
+  const [manualUrls, setManualUrls] = useState('');
 
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState([]);
@@ -40,6 +46,14 @@ export default function Home() {
     return data;
   }
 
+  function buildPageUrl(root, page) {
+    if (page === 1) return root;
+    if (paginationPattern.includes('{page}')) {
+      return root + paginationPattern.replace('{page}', String(page));
+    }
+    return `${root}${paginationPattern}${page}`;
+  }
+
   async function run() {
     setRunning(true);
     setPosts([]);
@@ -48,43 +62,60 @@ export default function Home() {
     abortRef.current = false;
 
     try {
-      /* ---------- 1. discover post URLs ---------- */
       let urls = [];
 
-      if (useSitemap) {
+      if (discoveryMode === 'manual') {
+        urls = manualUrls
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        log(`• Manual mode: ${urls.length} URLs loaded.`);
+      }
+
+      const wantSitemap =
+        discoveryMode === 'auto' || discoveryMode === 'sitemap';
+      const wantCrawl =
+        discoveryMode === 'auto' || discoveryMode === 'crawl';
+
+      if (!urls.length && wantSitemap) {
         setProgress({ phase: 'Reading sitemap…', done: 0, total: 0 });
         log('→ Fetching sitemap.xml…');
         try {
-          const { urls: found } = await post('/api/sitemap', { baseUrl });
+          const { urls: found } = await post('/api/sitemap', {
+            baseUrl,
+            postRegex: postRegex || undefined,
+          });
           if (found?.length) {
             urls = found;
             log(`✓ Sitemap yielded ${urls.length} post URLs.`);
           } else {
-            log('• Sitemap empty — falling back to paginated crawl.');
+            log('• Sitemap empty — falling back to crawl.');
           }
         } catch (e) {
           log(`• Sitemap failed (${e.message}) — falling back to crawl.`);
         }
       }
 
-      if (!urls.length) {
+      if (!urls.length && wantCrawl) {
         log(`→ Crawling index pages ${startPage}–${endPage}…`);
         const collected = [];
         const root = baseUrl.replace(/\/+$/, '');
         for (let p = startPage; p <= endPage; p++) {
           if (abortRef.current) throw new Error('Aborted by user');
-          const pageUrl = p === 1 ? root : `${root}/page/${p}`;
+          const pageUrl = buildPageUrl(root, p);
           setProgress({ phase: `Index page ${p}`, done: 0, total: 0 });
           try {
             const { urls: pageUrls } = await post('/api/scrape-index', {
               indexUrl: pageUrl,
               baseUrl,
+              postRegex: postRegex || undefined,
             });
             if (!pageUrls?.length) {
               log(`  page ${p}: no posts — stopping.`);
               break;
             }
-            for (const u of pageUrls) if (!collected.includes(u)) collected.push(u);
+            for (const u of pageUrls)
+              if (!collected.includes(u)) collected.push(u);
             log(`  page ${p}: +${pageUrls.length} (total ${collected.length})`);
           } catch (e) {
             log(`  page ${p}: ${e.message}`);
@@ -98,14 +129,17 @@ export default function Home() {
       if (!urls.length) throw new Error('No post URLs discovered.');
       log(`→ Scraping ${urls.length} posts (concurrency ${concurrency})…`);
 
-      /* ---------- 2. scrape each post ---------- */
       let ok = 0;
       let fail = 0;
       const results = await pMap(
         urls,
         async (u) => {
           if (abortRef.current) throw new Error('Aborted');
-          const { post: p } = await post('/api/scrape-post', { url: u, baseUrl });
+          const { post: p } = await post('/api/scrape-post', {
+            url: u,
+            baseUrl,
+            contentSelector: contentSelector || undefined,
+          });
           ok++;
           return p;
         },
@@ -120,10 +154,12 @@ export default function Home() {
       const good = [];
       for (const r of results) {
         if (r && !r.error) good.push(r);
-        else { fail++; log(`  ✗ ${r?.url || 'unknown'}: ${r?.error}`); }
+        else {
+          fail++;
+          log(`  ✗ ${r?.url || 'unknown'}: ${r?.error}`);
+        }
       }
 
-      /* ---------- 3. RSS guid map ---------- */
       let guidMap = {};
       try {
         const { map } = await post('/api/rss', { baseUrl });
@@ -133,7 +169,6 @@ export default function Home() {
         log('• RSS unavailable — falling back to URL as guid.');
       }
 
-      /* ---------- 4. enrich + store ---------- */
       const enriched = good.map((p) => ({
         ...p,
         guid: guidMap[p.link.replace(/\/+$/, '')] || p.link,
@@ -150,7 +185,6 @@ export default function Home() {
     }
   }
 
-  /* ---------- downloads ---------- */
   function downloadBlob(content, filename, type) {
     const blob = new Blob([content], { type });
     const href = URL.createObjectURL(blob);
@@ -164,7 +198,11 @@ export default function Home() {
   }
 
   function downloadCsv() {
-    downloadBlob(buildCsv(posts, manifest), 'blog_export.csv', 'text/csv;charset=utf-8');
+    downloadBlob(
+      buildCsv(posts, manifest),
+      'blog_export.csv',
+      'text/csv;charset=utf-8'
+    );
   }
 
   function downloadWxr() {
@@ -212,7 +250,7 @@ export default function Home() {
     <div className="wrap">
       <h1>Blog Migrator</h1>
       <div className="sub">
-        OctoberCMS → CSV + WXR (WordPress) + images · powered by Axios + Cheerio
+        Any blog → CSV + WXR (WordPress) + images · Axios + Cheerio
       </div>
 
       <div className="card">
@@ -224,6 +262,7 @@ export default function Home() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               disabled={running}
+              placeholder="https://example.com/blog"
             />
           </div>
           <div>
@@ -261,18 +300,6 @@ export default function Home() {
             />
           </div>
           <div>
-            <label>Discovery</label>
-            <div className="row" style={{ marginTop: 8 }}>
-              <input
-                type="checkbox"
-                checked={useSitemap}
-                onChange={(e) => setUseSitemap(e.target.checked)}
-                disabled={running}
-              />
-              Prefer sitemap.xml
-            </div>
-          </div>
-          <div>
             <label>ZIP options</label>
             <div className="row" style={{ marginTop: 8 }}>
               <input
@@ -285,8 +312,90 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+      <div className="card">
+        <label>Site profile</label>
+        <div className="grid g4">
+          <div>
+            <label style={{ marginTop: 8 }}>Discovery</label>
+            <select
+              value={discoveryMode}
+              onChange={(e) => setDiscoveryMode(e.target.value)}
+              disabled={running}
+            >
+              <option value="auto">Auto (sitemap → crawl)</option>
+              <option value="sitemap">Sitemap only</option>
+              <option value="crawl">Paginated crawl</option>
+              <option value="manual">Manual URL list</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ marginTop: 8 }}>Pagination mode</label>
+            <select
+              value={paginationMode}
+              onChange={(e) => {
+                const mode = e.target.value;
+                setPaginationMode(mode);
+                if (mode === 'path') setPaginationPattern('/page/{page}');
+                if (mode === 'query') setPaginationPattern('?page={page}');
+              }}
+              disabled={running || discoveryMode !== 'crawl'}
+            >
+              <option value="path">Path — /page/{'{page}'}</option>
+              <option value="query">Query — ?page={'{page}'}</option>
+              <option value="custom">Custom pattern</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ marginTop: 8 }}>Pagination pattern</label>
+            <input
+              type="text"
+              value={paginationPattern}
+              onChange={(e) => setPaginationPattern(e.target.value)}
+              disabled={running || discoveryMode !== 'crawl'}
+              placeholder="/page/{page}"
+            />
+          </div>
+          <div>
+            <label style={{ marginTop: 8 }}>Content selector</label>
+            <input
+              type="text"
+              value={contentSelector}
+              onChange={(e) => setContentSelector(e.target.value)}
+              disabled={running}
+              placeholder="article, .post-content"
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14 }}>
+          <label>Post URL regex (optional — blank = auto)</label>
+          <input
+            type="text"
+            value={postRegex}
+            onChange={(e) => setPostRegex(e.target.value)}
+            disabled={running}
+            placeholder="^/blog/[a-z0-9-]+/?$"
+          />
+        </div>
+
+        {discoveryMode === 'manual' && (
+          <div style={{ marginTop: 14 }}>
+            <label>Manual URLs (one per line)</label>
+            <textarea
+              value={manualUrls}
+              onChange={(e) => setManualUrls(e.target.value)}
+              disabled={running}
+              rows={6}
+              style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={run} disabled={running}>
             {running ? 'Working…' : 'Start migration'}
           </button>
@@ -338,7 +447,7 @@ export default function Home() {
               <button onClick={downloadZip} disabled={!!zipProgress}>
                 {zipProgress
                   ? `Zipping ${zipProgress.done}/${zipProgress.total}…`
-                  : 'Download ZIP (CSV + WXR + images)'}
+                  : 'Download ZIP'}
               </button>
             </div>
           </div>

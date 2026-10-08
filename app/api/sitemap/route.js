@@ -6,8 +6,8 @@ export const maxDuration = 60;
 
 export async function POST(req) {
   try {
-    const { baseUrl } = await req.json();
-    const urls = await getPostUrlsFromSitemap(baseUrl);
+    const { baseUrl, postRegex } = await req.json();
+    const urls = await getPostUrlsFromSitemap(baseUrl, postRegex);
     return NextResponse.json({ urls });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
