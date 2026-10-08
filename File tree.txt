@@ -1,0 +1,18 @@
+blog-migrator/
+├── package.json
+├── next.config.js
+├── app/
+│   ├── layout.js
+│   ├── globals.css
+│   ├── page.js
+│   └── api/
+│       ├── sitemap/route.js
+│       ├── rss/route.js
+│       ├── scrape-index/route.js
+│       ├── scrape-post/route.js
+│       └── image/route.js
+└── lib/
+    ├── scraper.js
+    ├── csv.js
+    ├── wxr.js
+    └── utils.js
