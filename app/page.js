@@ -8,7 +8,7 @@ import { buildWxr } from '@/lib/wxr';
 
 export default function Home() {
   const [baseUrl, setBaseUrl] = useState(
-    'https://www.midtownrichmonddentistry.com/blog'
+    'https://www.officite.com/<webID>/blog'
   );
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(35);
@@ -256,7 +256,7 @@ export default function Home() {
       <div className="card">
         <div className="grid g2">
           <div>
-            <label>Blog base URL</label>
+            <label>Blog base URL: use officite staging URL so to avoid robot traps lol</label>
             <input
               type="text"
               value={baseUrl}
