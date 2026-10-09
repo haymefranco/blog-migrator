@@ -1,5 +1,5 @@
 import './globals.css';
-import SpotifyPlayer from '@/components/SpotifyPlayer';
+
 
 export const metadata = {
   title: 'Blog Migrator',
@@ -11,7 +11,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         {children}
-        <SpotifyPlayer />
+        
       </body>
     </html>
   );
