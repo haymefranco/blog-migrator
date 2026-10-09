@@ -10,6 +10,7 @@ export default function Home() {
   const [baseUrl, setBaseUrl] = useState(
     'https://www.officite.com/<webID>/blog'
   );
+  const [spotifyOpen, setSpotifyOpen] = useState(true);
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(35);
   const [concurrency, setConcurrency] = useState(4);
@@ -248,6 +249,22 @@ export default function Home() {
 
   return (
     <div className="wrap">
+{!spotifyOpen && (
+  <button
+    onClick={() => setSpotifyOpen(true)}
+    style={{
+      position: 'fixed',
+      bottom: 16,
+      right: 16,
+      zIndex: 9999,
+      borderRadius: 999,
+      padding: '10px 16px',
+    }}
+  >
+    🎵 Show Spotify
+  </button>
+)}
+
       <h1>Franc's Blog Migrator</h1>
       <div className="sub">
         Any blog → CSV + WXR (WordPress) + images · Axios + Cheerio
@@ -490,6 +507,51 @@ export default function Home() {
           </div>
         </div>
       )}
+
+
+
+
+
+
+      {spotifyOpen && (
+  <div
+    style={{
+      position: 'fixed',
+      bottom: 16,
+      right: 16,
+      width: 340,
+      background: '#14171f',
+      border: '1px solid #222734',
+      borderRadius: 12,
+      overflow: 'hidden',
+      zIndex: 9999,
+      boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 12px',
+        borderBottom: '1px solid #222734',
+        fontSize: 12,
+        color: '#8b93a7',
+      }}
+    >
+      <span>🎵 Spotify</span>
+      <button
+        className="ghost"
+        style={{ padding: '4px 10px', fontSize: 11 }}
+        onClick={() => setSpotifyOpen(false)}
+      >
+        Hide
+      </button>
     </div>
+    <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/1bVBu4lbmkImztLOHH9eSv?utm_source=generator&theme=0&si=f284c95579964b34" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+  </div>
+)}
+    </div>
+    
   );
 }
