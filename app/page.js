@@ -248,6 +248,7 @@ export default function Home() {
     progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
+    <>
     <div className="wrap">
 {!spotifyOpen && (
   <button
@@ -513,45 +514,75 @@ export default function Home() {
 
 
 
-      {spotifyOpen && (
-  <div
-    style={{
-      position: 'fixed',
-      bottom: 16,
-      right: 16,
-      width: 340,
-      background: '#14171f',
-      border: '1px solid #222734',
-      borderRadius: 12,
-      overflow: 'hidden',
-      zIndex: 9999,
-      boxShadow: '0 8px 32px rgba(0,0,0,.5)',
-    }}
-  >
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 12px',
-        borderBottom: '1px solid #222734',
-        fontSize: 12,
-        color: '#8b93a7',
-      }}
-    >
-      <span>🎵 Spotify</span>
-      <button
-        className="ghost"
-        style={{ padding: '4px 10px', fontSize: 11 }}
-        onClick={() => setSpotifyOpen(false)}
+          </div>
+
+    {/* Spotify floating player — outside .wrap so position:fixed is viewport-anchored */}
+    {spotifyOpen && (
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          width: 340,
+          background: '#14171f',
+          border: '1px solid #222734',
+          borderRadius: 12,
+          overflow: 'hidden',
+          zIndex: 9999,
+          boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+        }}
       >
-        Hide
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 12px',
+            borderBottom: '1px solid #222734',
+            fontSize: 12,
+            color: '#8b93a7',
+          }}
+        >
+          <span>🎵 Spotify</span>
+          <button
+            className="ghost"
+            style={{ padding: '4px 10px', fontSize: 11 }}
+            onClick={() => setSpotifyOpen(false)}
+          >
+            Hide
+          </button>
+        </div>
+
+        <iframe
+          data-testid="embed-iframe"
+          style={{ borderRadius: 12, display: 'block' }}
+          src="https://open.spotify.com/embed/playlist/1bVBu4lbmkImztLOHH9eSv?utm_source=generator&theme=0"
+          width="100%"
+          height="352"
+          frameBorder="0"
+          allowFullScreen
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+        />
+      </div>
+    )}
+
+    {!spotifyOpen && (
+      <button
+        onClick={() => setSpotifyOpen(true)}
+        style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 9999,
+          borderRadius: 999,
+          padding: '10px 16px',
+        }}
+      >
+        🎵 Show Spotify
       </button>
-    </div>
-    <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/1bVBu4lbmkImztLOHH9eSv?utm_source=generator&theme=0&si=f284c95579964b34" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-  </div>
-)}
-    </div>
-    
+    )}
+  </>
+
   );
 }
